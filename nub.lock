@@ -35,6 +35,8 @@ importers:
 
   packages/deepseek: {}
 
+  packages/ecnu: {}
+
   packages/ollama-cloud: {}
 
 packages:

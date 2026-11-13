@@ -9,6 +9,7 @@ Each package in this monorepo is independently published under the `@zhexin/pi-*
 | Package                                                        | Description                                                                     |
 | -------------------------------------------------------------- | ------------------------------------------------------------------------------- |
 | [`@zhexin/pi-deepseek`](./packages/deepseek/README.md)         | Web search and web fetch tools powered by DeepSeek (`web-search`, `web-fetch`). |
+| [`@zhexin/pi-ecnu`](./packages/ecnu/README.md)                 | ECNU Chat provider with chat and image models.                                  |
 | [`@zhexin/pi-ollama-cloud`](./packages/ollama-cloud/README.md) | Ollama Cloud provider and web search/fetch tools (`web-search`, `web-fetch`).   |
 
 ## Development

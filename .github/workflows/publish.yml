@@ -9,6 +9,7 @@ on:
         type: choice
         options:
           - deepseek
+          - ecnu
           - ollama-cloud
 
 permissions:
