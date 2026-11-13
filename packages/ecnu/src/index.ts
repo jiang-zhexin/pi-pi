@@ -1,5 +1,6 @@
 import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";
 
+import { classify } from "./classify.ts";
 import { generateImages } from "./images.ts";
 import { models } from "./model.ts";
 
@@ -11,5 +12,6 @@ export default function (pi: ExtensionAPI): void {
     api: "openai-completions",
     models,
     images: { "ecnu-images": { generateImages } },
+    classifiers: { "ecnu-decision": { classify } },
   });
 }

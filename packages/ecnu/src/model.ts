@@ -56,6 +56,16 @@ export const models: ProviderModelConfig[] = [
     },
   },
   {
+    type: "classifier",
+    id: "ecnu-decision",
+    name: "D3 Flash",
+    api: "ecnu-decision",
+    input: ["text", "image"],
+    // Temporarily free during the launch period.
+    cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0 },
+    contextWindow: 16 * 1024,
+  },
+  {
     type: "image",
     id: "ecnu-image",
     name: "Qwen Image 2.1",
