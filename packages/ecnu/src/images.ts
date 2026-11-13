@@ -78,7 +78,7 @@ function editsOrGenerations(
       );
     }
 
-    return fetcher(`${model.baseUrl}/images/edits`, {
+    return fetcher(new URL("/open/api/v1/images/edits", model.baseUrl), {
       method: "POST",
       body: form,
       headers: {
@@ -87,7 +87,7 @@ function editsOrGenerations(
       signal: options?.signal ?? null,
     });
   } else {
-    return fetcher(`${model.baseUrl}/images/generations`, {
+    return fetcher(new URL("/open/api/v1/images/generations", model.baseUrl), {
       method: "POST",
       body: JSON.stringify({
         model: model.id,

@@ -14,7 +14,7 @@ export async function classify(
 ): Promise<ClassifierResult> {
   const fetcher = options?.fetch ?? globalThis.fetch;
 
-  const resp = await fetcher(`${model.baseUrl}/systemone`, {
+  const resp = await fetcher(new URL("/open/api/v1/systemone", model.baseUrl), {
     method: "POST",
     body: JSON.stringify({
       model: model.id,
