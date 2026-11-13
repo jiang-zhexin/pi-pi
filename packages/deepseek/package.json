@@ -1,0 +1,49 @@
+{
+  "name": "@zhexin/pi-deepseek",
+  "description": "DeepSeek Enhancement for Pi",
+  "version": "0.0.1",
+  "type": "module",
+  "license": "MIT",
+  "keywords": [
+    "pi-package",
+    "deepseek",
+    "web-access"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/jiang-zhexin/pi-pi.git",
+    "directory": "packages/deepseek"
+  },
+  "homepage": "https://github.com/jiang-zhexin/pi-pi/tree/HEAD/packages/deepseek#readme",
+  "bugs": {
+    "url": "https://github.com/jiang-zhexin/pi-pi/issues"
+  },
+  "files": [
+    "src/*",
+    "index.ts"
+  ],
+  "publishConfig": {
+    "access": "public",
+    "registry": "https://registry.npmjs.org/"
+  },
+  "exports": {
+    ".": "./index.ts"
+  },
+  "peerDependencies": {
+    "@earendil-works/pi-coding-agent": "*",
+    "typebox": "*"
+  },
+  "peerDependenciesMeta": {
+    "@earendil-works/pi-coding-agent": {
+      "optional": true
+    },
+    "typebox": {
+      "optional": true
+    }
+  },
+  "pi": {
+    "extensions": [
+      "./index.ts"
+    ]
+  }
+}
