@@ -1,4 +1,4 @@
-import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";
+import type { ExtensionAPI, ExtensionContext } from "@earendil-works/pi-coding-agent";
 import type { Static } from "typebox";
 
 import { classify } from "./classify.ts";
@@ -6,6 +6,26 @@ import { models } from "./model.ts";
 import { fetchInput, fetchOutput, searchInput, searchOutput } from "./schema.ts";
 
 const unauthorized = new Error("Unauthorized. Run `/login ollama-cloud` to authenticate.");
+
+async function resolveOllamaRequest(ctx: ExtensionContext, path: string) {
+  const authResult = await ctx.modelRegistry.getProviderAuth("ollama-cloud");
+  const apiKey = authResult?.auth.apiKey;
+  if (apiKey === undefined) throw unauthorized;
+
+  const baseUrl =
+    authResult?.auth.baseUrl ??
+    ctx.modelRegistry.getProvider("ollama-cloud")?.baseUrl ??
+    "https://ollama.com";
+
+  return {
+    url: new URL(path, baseUrl),
+    headers: {
+      ...authResult?.auth.headers,
+      Authorization: `Bearer ${apiKey}`,
+      "Content-Type": "application/json",
+    },
+  };
+}
 
 export default function (pi: ExtensionAPI): void {
   pi.registerProvider("ollama-cloud", {
@@ -24,15 +44,11 @@ export default function (pi: ExtensionAPI): void {
     parameters: searchInput,
     outputSchema: searchOutput,
     async execute(_toolCallId, params, signal, _onUpdate, ctx) {
-      const ollamaApiKey = await ctx.modelRegistry.getApiKeyForProvider("ollama-cloud");
-      if (ollamaApiKey === undefined) throw unauthorized;
+      const { url, headers } = await resolveOllamaRequest(ctx, "/api/web_search");
 
-      const response = await fetch("https://ollama.com/api/web_search", {
+      const response = await fetch(url, {
         method: "POST",
-        headers: {
-          Authorization: `Bearer ${ollamaApiKey}`,
-          "Content-Type": "application/json",
-        },
+        headers,
         body: JSON.stringify(params),
         signal: signal ?? null,
       });
@@ -67,15 +83,11 @@ export default function (pi: ExtensionAPI): void {
     parameters: fetchInput,
     outputSchema: fetchOutput,
     async execute(_toolCallId, params, signal, _onUpdate, ctx) {
-      const ollamaApiKey = await ctx.modelRegistry.getApiKeyForProvider("ollama-cloud");
-      if (ollamaApiKey === undefined) throw unauthorized;
+      const { url, headers } = await resolveOllamaRequest(ctx, "/api/web_fetch");
 
-      const response = await fetch("https://ollama.com/api/web_fetch", {
+      const response = await fetch(url, {
         method: "POST",
-        headers: {
-          Authorization: `Bearer ${ollamaApiKey}`,
-          "Content-Type": "application/json",
-        },
+        headers,
         body: JSON.stringify(params),
         signal: signal ?? null,
       });
