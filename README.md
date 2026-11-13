@@ -6,9 +6,10 @@ Each package in this monorepo is independently published under the `@zhexin/pi-*
 
 ## Packages
 
-| Package                                                | Description                                                                     |
-| ------------------------------------------------------ | ------------------------------------------------------------------------------- |
-| [`@zhexin/pi-deepseek`](./packages/deepseek/README.md) | Web search and web fetch tools powered by DeepSeek (`web-search`, `web-fetch`). |
+| Package                                                        | Description                                                                     |
+| -------------------------------------------------------------- | ------------------------------------------------------------------------------- |
+| [`@zhexin/pi-deepseek`](./packages/deepseek/README.md)         | Web search and web fetch tools powered by DeepSeek (`web-search`, `web-fetch`). |
+| [`@zhexin/pi-ollama-cloud`](./packages/ollama-cloud/README.md) | Ollama Cloud provider and web search/fetch tools (`web-search`, `web-fetch`).   |
 
 ## Development
 
