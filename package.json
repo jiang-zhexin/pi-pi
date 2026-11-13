@@ -6,6 +6,10 @@
   "workspaces": [
     "packages/*"
   ],
+  "allowScripts": {
+    "@google/genai": false,
+    "protobufjs": false
+  },
   "scripts": {
     "check": "tsc",
     "fmt": "oxfmt",

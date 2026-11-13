@@ -1,0 +1,40 @@
+name: Publish to npm
+
+on:
+  workflow_dispatch:
+    inputs:
+      package:
+        description: Package to publish
+        required: true
+        type: choice
+        options:
+          - deepseek
+          - ollama-cloud
+
+permissions:
+  contents: read
+
+concurrency:
+  group: npm-publish-${{ inputs.package }}
+  cancel-in-progress: false
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+
+    permissions:
+      contents: read
+      id-token: write
+
+    steps:
+      - name: Check out source
+        uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+
+      - name: Set up Nub and Node.js
+        uses: nubjs/setup-nub@v0
+
+      - name: Publish with OIDC
+        working-directory: packages/${{ inputs.package }}
+        run: nub publish --access public --provenance
