@@ -63,3 +63,49 @@ export const fetchOutput = Type.Object({
   title: Type.String(),
   content: Type.String(),
 });
+
+export const ocrInput = Type.Object({
+  path: Type.String({
+    minLength: 1,
+    description:
+      "Path to the file to recognize. Supported: PDF, Word (DOC, DOCX), PowerPoint (PPT, PPTX), and images (PNG, JPEG, WebP, GIF, BMP, TIFF).",
+  }),
+  purpose: Type.Enum(["text_recognition", "rich_layout_recognition"], {
+    description:
+      "text_recognition extracts text directly from Word and PowerPoint files without images and recognizes other files page by page. rich_layout_recognition recognizes every file page by page.",
+  }),
+});
+
+export const ocrOutput = Type.Object({
+  id: Type.String(),
+  object: Type.Literal("ocr.result"),
+  created: Type.Integer(),
+  purpose: Type.Enum(["text_recognition", "rich_layout_recognition"]),
+  page_count: Type.Integer(),
+  pages: Type.Array(
+    Type.Object({
+      index: Type.Integer(),
+      text: Type.String(),
+      finish_reason: Type.Enum(["stop", "length"]),
+    }),
+  ),
+  usage: Type.Object({
+    input_tokens: Type.Integer(),
+    output_tokens: Type.Integer(),
+    total_tokens: Type.Integer(),
+  }),
+});
+
+export const asrInput = Type.Object({
+  path: Type.String({
+    minLength: 1,
+    description:
+      "Path to the audio file to transcribe (16-bit PCM WAV or Ogg Opus, max 8 MiB, max 120 seconds).",
+  }),
+});
+
+export const asrOutput = Type.Object({
+  request_id: Type.String(),
+  text: Type.String(),
+  duration_ms: Type.Integer(),
+});

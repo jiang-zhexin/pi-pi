@@ -2,7 +2,7 @@
 
 DeepSeek Enhancement Extension for the [Pi](https://pi.dev) coding agent.
 
-Include **web search/fetch** tools. Nothing more.
+Include **web search/fetch**, **OCR**, and **ASR** tools. Nothing more.
 
 Most extensions I've tried seem to be compensating for something. Config that fights pi's philosophy, feature lists that look like a spaceship's dashboard, and UIs that assume you wanted a personal assistant.
 
