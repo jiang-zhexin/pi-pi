@@ -85,7 +85,7 @@ export async function jsonRequest<T>(
   return body as T;
 }
 
-function rpc<T>(
+export function rpc<T>(
   access: string,
   endpoint: string,
   method: string,
