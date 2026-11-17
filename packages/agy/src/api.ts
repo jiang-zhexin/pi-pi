@@ -15,7 +15,6 @@ import {
   type StreamOptions,
   type TranscriptContext,
 } from "@earendil-works/pi-ai";
-import { clampMaxTokensToContext } from "@earendil-works/pi-ai/api/simple-options";
 import { googleGenerativeAIApi } from "@earendil-works/pi-ai/compat";
 
 import { endpointUrl, PROJECT_HEADER, USER_AGENT } from "./ccpa.ts";
@@ -212,14 +211,7 @@ function stream(
             context,
             {
               ...innerOptions,
-              maxTokens:
-                method === "streamSimple"
-                  ? clampMaxTokensToContext(
-                      model,
-                      context,
-                      innerOptions.maxTokens ?? model.maxTokens,
-                    )
-                  : (innerOptions.maxTokens ?? model.maxTokens),
+              maxTokens: innerOptions.maxTokens ?? model.maxTokens,
               ...(backendId ? { thinking: { enabled: true } } : {}),
               apiKey: adapter.key,
               headers: Object.fromEntries(headers),
