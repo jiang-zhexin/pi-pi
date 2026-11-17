@@ -1,0 +1,49 @@
+{
+  "name": "@zhexin/pi-agy",
+  "description": "Antigravity OAuth provider for the Pi agent.",
+  "version": "0.0.1",
+  "type": "module",
+  "license": "MIT",
+  "keywords": [
+    "pi-package",
+    "antigravity",
+    "oauth"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/jiang-zhexin/pi-pi.git",
+    "directory": "packages/agy"
+  },
+  "homepage": "https://github.com/jiang-zhexin/pi-pi/tree/HEAD/packages/agy#readme",
+  "bugs": {
+    "url": "https://github.com/jiang-zhexin/pi-pi/issues"
+  },
+  "files": [
+    "src/*",
+    "index.ts"
+  ],
+  "publishConfig": {
+    "access": "public",
+    "registry": "https://registry.npmjs.org/"
+  },
+  "exports": {
+    ".": "./index.ts"
+  },
+  "peerDependencies": {
+    "@earendil-works/pi-ai": "*",
+    "@earendil-works/pi-coding-agent": "*"
+  },
+  "peerDependenciesMeta": {
+    "@earendil-works/pi-ai": {
+      "optional": true
+    },
+    "@earendil-works/pi-coding-agent": {
+      "optional": true
+    }
+  },
+  "pi": {
+    "extensions": [
+      "./index.ts"
+    ]
+  }
+}
