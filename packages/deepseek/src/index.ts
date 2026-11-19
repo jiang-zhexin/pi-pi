@@ -3,6 +3,7 @@ import { basename, resolve } from "node:path";
 
 import type {
   ExtensionAPI,
+  ExtensionCommandContext,
   ExtensionContext,
   ToolNamespace,
 } from "@earendil-works/pi-coding-agent";
@@ -10,7 +11,18 @@ import type { Static } from "typebox";
 
 import * as schema from "./schema.ts";
 
-const unauthorized = new Error("Unauthorized. Run `/login deepseek` to authenticate.");
+const authHint = "Run /login deepseek to authenticate.";
+const unauthorized = new Error(`Unauthorized. ${authHint}`);
+
+type UserBalance = {
+  is_available: boolean;
+  balance_infos: {
+    currency: string;
+    total_balance: string;
+    granted_balance: string;
+    topped_up_balance: string;
+  }[];
+};
 
 const deepseekNamespace: ToolNamespace = {
   name: "deepseek",
@@ -37,6 +49,46 @@ async function resolveDeepSeekRequest(ctx: ExtensionContext, path: string) {
 }
 
 export default function (pi: ExtensionAPI): void {
+  pi.events.on("pi-usage:discover", (data) => {
+    const discovery = data as {
+      add: (provider: { id: string; label: string; authHint: string }) => void;
+    };
+    if (typeof discovery?.add !== "function") return;
+    discovery.add({ id: "deepseek", label: "DeepSeek", authHint });
+  });
+
+  pi.events.on("pi-usage:request", async (data) => {
+    const request = data as { provider: string; ctx: ExtensionCommandContext } | undefined;
+    if (request?.provider !== "deepseek" || !request.ctx) return;
+    const { ctx } = request;
+
+    try {
+      const { url, headers } = await resolveDeepSeekRequest(ctx, "/user/balance");
+      const timeout = AbortSignal.timeout(30_000);
+      const signal = ctx.signal ? AbortSignal.any([ctx.signal, timeout]) : timeout;
+      const response = await fetch(url, { headers, signal });
+      if (response.status === 401) throw unauthorized;
+      if (!response.ok) throw new Error(`HTTP ${response.status}`);
+
+      const balance = (await response.json()) as UserBalance;
+      const amounts = balance.balance_infos.map(
+        ({ currency, total_balance, granted_balance, topped_up_balance }) =>
+          `${currency}: ${total_balance} total (${granted_balance} granted, ${topped_up_balance} topped up)`,
+      );
+      const message = [
+        `DeepSeek balance · ${balance.is_available ? "API calls available" : "Insufficient balance for API calls"}`,
+        ...(amounts.length ? amounts : ["No balance details available."]),
+      ].join("\n");
+
+      if (ctx.hasUI) ctx.ui.notify(message);
+      else console.log(message);
+    } catch (error) {
+      const message = `DeepSeek balance query failed: ${error instanceof Error ? error.message : String(error)}`;
+      if (ctx.hasUI) ctx.ui.notify(message, "error");
+      else console.error(message);
+    }
+  });
+
   pi.registerTool({
     name: "web-search",
     label: "DeepSeek Web Search",
