@@ -2,6 +2,7 @@ import { arch, platform } from "node:os";
 import { setTimeout } from "node:timers/promises";
 
 import type {
+  ImageModel,
   Model,
   ModelThinkingLevel,
   OAuthCredential,
@@ -31,8 +32,10 @@ type Catalog = {
       maxTokens: number;
       maxOutputTokens: number;
       recommended?: boolean;
+      supportsImages?: boolean;
     }
   >;
+  imageGenerationModelIds?: string[];
   agentModelSorts: {
     groups: {
       modelIds: string[];
@@ -66,7 +69,7 @@ export async function jsonRequest<T>(
   const response = await fetch(url, {
     ...init,
     redirect: "error",
-    signal: AbortSignal.any([signal, AbortSignal.timeout(30_000)]),
+    signal,
   });
   const body = (await response.json().catch(() => undefined)) as
     | {
@@ -163,7 +166,7 @@ export async function onboard(
 export async function fetchModels(
   credential: AgyCredential,
   signal: AbortSignal,
-): Promise<Model<"google-generative-ai">[]> {
+): Promise<(Model<"google-generative-ai"> | ImageModel<"agy-images">)[]> {
   const catalog = await rpc<Catalog>(
     credential.access,
     credential.endpoint,
@@ -171,11 +174,11 @@ export async function fetchModels(
     { project: credential.project },
     signal,
   );
-  const ids = catalog.agentModelSorts.flatMap((sort) =>
+
+  const chatIds = catalog.agentModelSorts.flatMap((sort) =>
     sort.groups.flatMap((group) => group.modelIds),
   );
-
-  const variants = ids.map((id) => {
+  const variants = chatIds.map((id) => {
     const info = catalog.models[id]!;
     const match = /^(.*)-(off|minimal|low|medium|high|xhigh|max)$/.exec(id);
     const modelId = match?.[1] ?? id;
@@ -190,7 +193,7 @@ export async function fetchModels(
       maxOutputTokens: info.maxOutputTokens,
     };
   });
-  const models = [...Map.groupBy(variants, ({ modelId }) => modelId)].map(
+  const chatModels = [...Map.groupBy(variants, ({ modelId }) => modelId)].map(
     ([id, variants]): Model<"google-generative-ai"> => {
       const levels = variants.flatMap(({ level, id }) => (level ? [[level, id]] : []));
       const thinkingLevelMap: ThinkingLevelMap = {
@@ -218,5 +221,22 @@ export async function fetchModels(
       };
     },
   );
-  return models;
+
+  const imageModels =
+    catalog.imageGenerationModelIds?.map((id): ImageModel<"agy-images"> => {
+      const info = catalog.models[id];
+      return {
+        type: "image",
+        id,
+        name: info?.displayName || id,
+        provider: "agy",
+        api: "agy-images",
+        baseUrl: credential.endpoint,
+        input: info?.supportsImages ? ["text", "image"] : ["text"],
+        output: ["text", "image"],
+        cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0 },
+      };
+    }) ?? [];
+
+  return [...chatModels, ...imageModels];
 }

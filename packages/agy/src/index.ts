@@ -4,6 +4,7 @@ import type { ExtensionAPI, ExtensionCommandContext } from "@earendil-works/pi-c
 import { api } from "./api.ts";
 import { oauth } from "./auth.ts";
 import { agyCredential, fetchModels } from "./ccpa.ts";
+import { imagesApi } from "./images.ts";
 import { usage } from "./usage.ts";
 
 export default function (pi: ExtensionAPI): void {
@@ -50,6 +51,7 @@ export default function (pi: ExtensionAPI): void {
       name: "Antigravity",
       auth: { oauth },
       models: [],
+      images: { ["agy-images"]: imagesApi },
       async fetchModels({ credential, signal }) {
         if (credential?.type !== "oauth") throw new Error("Run /login agy to authenticate.");
         return fetchModels(agyCredential(credential), signal);
