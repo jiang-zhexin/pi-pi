@@ -6,42 +6,30 @@ import { oauth } from "./auth.ts";
 import { agyCredential, fetchModels } from "./ccpa.ts";
 import { usage } from "./usage.ts";
 
-const commands: Record<
-  string,
-  {
-    description: string;
-    handler: (args: string, ctx: ExtensionCommandContext) => Promise<void>;
-  }
-> = {
-  usage: { description: "Show remaining quota", handler: usage },
-};
-
 export default function (pi: ExtensionAPI): void {
-  pi.registerCommand("agy", {
-    description: "Antigravity commands",
-    getArgumentCompletions: (prefix) => {
-      const items = Object.entries(commands)
-        .filter(([name]) => name.startsWith(prefix))
-        .map(([name, command]) => ({
-          value: name,
-          label: name,
-          description: command.description,
-        }));
-      return items.length ? items : null;
-    },
-    handler: async (input, ctx) => {
-      const [name = "", ...args] = input.trim().split(/\s+/);
-      const command = Object.hasOwn(commands, name) ? commands[name] : undefined;
-      if (command) {
-        await command.handler(args.join(" "), ctx);
-        return;
-      }
-      const help = Object.entries(commands)
-        .map(([name, command]) => `/agy ${name} — ${command.description}`)
-        .join("\n");
-      if (ctx.hasUI) ctx.ui.notify(help, "info");
-      else console.log(help);
-    },
+  pi.events.on("pi-usage:discover", (data) => {
+    const discovery = data as {
+      add: (provider: { id: string; label: string; authHint: string }) => void;
+    };
+    if (typeof discovery?.add !== "function") return;
+    discovery.add({
+      id: "agy",
+      label: "Antigravity",
+      authHint: "Run /login agy to authenticate.",
+    });
+  });
+
+  pi.events.on("pi-usage:request", async (data) => {
+    const request = data as { provider: string; ctx: ExtensionCommandContext } | undefined;
+    if (request?.provider !== "agy" || !request.ctx) return;
+    const { ctx } = request;
+    try {
+      await usage(ctx);
+    } catch (error) {
+      const message = `Antigravity quota query failed: ${error instanceof Error ? error.message : String(error)}`;
+      if (ctx.hasUI) ctx.ui.notify(message, "error");
+      else console.error(message);
+    }
   });
 
   pi.on("before_agent_start", async (event, ctx) => {

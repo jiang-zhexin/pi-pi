@@ -28,7 +28,7 @@ function resetLabel(resetTime: string | undefined, now: number): string {
   return ` · resets in ${remaining}`;
 }
 
-export async function usage(_args: string, ctx: ExtensionCommandContext): Promise<void> {
+export async function usage(ctx: ExtensionCommandContext): Promise<void> {
   const output = (text: string) => {
     if (ctx.hasUI) ctx.ui.notify(text);
     else console.log(text);
