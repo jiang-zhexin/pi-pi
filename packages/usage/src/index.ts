@@ -24,7 +24,7 @@ export default function (pi: ExtensionAPI): void {
       return items.length ? items : null;
     },
     async handler(args, ctx) {
-      const provider = args.trim();
+      let provider = args.trim();
 
       const notify = (message: string, level: "info" | "warning" = "info") => {
         if (ctx.hasUI) ctx.ui.notify(message, level);
@@ -33,17 +33,18 @@ export default function (pi: ExtensionAPI): void {
 
       const providers = discover();
       if (!provider) {
-        const available = [...providers.keys()].filter(
-          (id) => ctx.modelRegistry.getProviderAuthStatus(id).configured,
-        );
-        if (available.length)
-          notify(`Usage: /usage <provider>\nAvailable: ${available.join(", ")}`);
-        else if (providers.size) {
-          notify(`Configure credentials for: ${[...providers.keys()].join(", ")}.`, "warning");
-        } else {
+        const options = [...providers.keys()];
+        if (!options.length) {
           notify("No usage adapters are loaded.", "warning");
+          return;
         }
-        return;
+        if (!ctx.hasUI) {
+          notify(`Usage: /usage <provider>\nDiscovered providers: ${options.join(", ")}`);
+          return;
+        }
+        const selected = await ctx.ui.select("Select a provider", options);
+        if (selected === undefined) return;
+        provider = selected;
       }
 
       const adapter = providers.get(provider);

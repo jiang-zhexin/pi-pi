@@ -6,6 +6,9 @@ A unified `/usage <provider>` command for the [Pi](https://pi.dev) coding agent.
 pi install npm:@zhexin/pi-usage
 ```
 
+Run `/usage` to pick from all discovered providers, or `/usage <provider>` to
+skip the picker. Either way, the selected provider must have configured credentials.
+
 ## Adapter protocol
 
 - Listen for `pi-usage:discover`. The payload is `{ add }`. Call
