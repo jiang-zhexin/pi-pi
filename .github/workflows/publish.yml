@@ -12,6 +12,7 @@ on:
           - deepseek
           - ecnu
           - ollama-cloud
+          - usage
 
 permissions:
   contents: read

@@ -1,0 +1,45 @@
+{
+  "name": "@zhexin/pi-usage",
+  "description": "A unified provider usage command for the Pi agent.",
+  "version": "0.1.0",
+  "type": "module",
+  "license": "MIT",
+  "keywords": [
+    "pi-package",
+    "usage",
+    "quota"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/jiang-zhexin/pi-pi.git",
+    "directory": "packages/usage"
+  },
+  "homepage": "https://github.com/jiang-zhexin/pi-pi/tree/HEAD/packages/usage#readme",
+  "bugs": {
+    "url": "https://github.com/jiang-zhexin/pi-pi/issues"
+  },
+  "files": [
+    "src/*",
+    "index.ts"
+  ],
+  "publishConfig": {
+    "access": "public",
+    "registry": "https://registry.npmjs.org/"
+  },
+  "exports": {
+    ".": "./index.ts"
+  },
+  "peerDependencies": {
+    "@earendil-works/pi-coding-agent": "*"
+  },
+  "peerDependenciesMeta": {
+    "@earendil-works/pi-coding-agent": {
+      "optional": true
+    }
+  },
+  "pi": {
+    "extensions": [
+      "./index.ts"
+    ]
+  }
+}
