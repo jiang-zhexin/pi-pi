@@ -11,7 +11,6 @@ import {
   type Model,
   type ModelThinkingLevel,
   type ProviderStreams,
-  type SimpleStreamOptions,
   type StreamOptions,
   type TranscriptContext,
 } from "@earendil-works/pi-ai";
@@ -167,11 +166,16 @@ async function bridge(
 
 const google = googleGenerativeAIApi();
 
-function stream(
-  method: "stream" | "streamSimple",
+function readGoogleThinkingLevel({ thinking }: GoogleOptions): ModelThinkingLevel {
+  if (!thinking?.enabled) return "off";
+  return (thinking.level?.toLowerCase() as ModelThinkingLevel | undefined) ?? "medium";
+}
+
+function streamAgy(
   model: Model<string>,
   context: TranscriptContext,
-  options: SimpleStreamOptions & GoogleOptions = {},
+  options: GoogleOptions,
+  requestedLevel: ModelThinkingLevel,
 ) {
   return lazyStream(
     model,
@@ -182,18 +186,14 @@ function stream(
         if (value !== null) headers.set(name, value);
       const project = headers.get(PROJECT_HEADER);
       if (!options.apiKey || !project) throw new Error("Run /login agy to authenticate.");
-      const requestedLevel =
-        method === "streamSimple"
-          ? (options.reasoning ?? "off")
-          : options.thinking?.enabled
-            ? ((options.thinking.level?.toLowerCase() as ModelThinkingLevel | undefined) ??
-              "medium")
-            : "off";
       const level = clampThinkingLevel(model, requestedLevel);
       const backendId = model.thinkingLevelMap?.[level];
+      if (!backendId) {
+        throw new Error(`AGY model "${model.id}" has no backend ID for thinking level "${level}".`);
+      }
       const adapter = await bridge(
         model,
-        backendId ?? model.id,
+        backendId,
         options.apiKey,
         project,
         endpointUrl(model.baseUrl),
@@ -205,17 +205,18 @@ function stream(
       headers.delete("x-goog-api-key");
       return (async function* () {
         try {
-          // AGY selects thinking effort through the backend ID, not Gemini's thinking config.
-          yield* google[backendId ? "stream" : method](
+          const streamOptions: GoogleOptions = {
+            ...innerOptions,
+            maxTokens: innerOptions.maxTokens ?? model.maxTokens,
+            // AGY selects thinking effort through the backend ID, not Gemini's thinking config.
+            thinking: { enabled: true },
+            apiKey: adapter.key,
+            headers: Object.fromEntries(headers),
+          };
+          yield* google.stream(
             { ...model, baseUrl: adapter.baseUrl, headers: Object.fromEntries(headers) },
             context,
-            {
-              ...innerOptions,
-              maxTokens: innerOptions.maxTokens ?? model.maxTokens,
-              ...(backendId ? { thinking: { enabled: true } } : {}),
-              apiKey: adapter.key,
-              headers: Object.fromEntries(headers),
-            },
+            streamOptions,
           );
         } finally {
           adapter.close();
@@ -228,6 +229,11 @@ function stream(
 }
 
 export const api: ProviderStreams = {
-  stream: (model, context, options) => stream("stream", model, context, options),
-  streamSimple: (model, context, options) => stream("streamSimple", model, context, options),
+  stream(model, context, options = {}) {
+    return streamAgy(model, context, options, readGoogleThinkingLevel(options));
+  },
+  streamSimple(model, context, options = {}) {
+    const { reasoning = "off", ...googleOptions } = options;
+    return streamAgy(model, context, googleOptions, reasoning);
+  },
 };

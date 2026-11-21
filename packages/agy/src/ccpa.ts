@@ -178,24 +178,28 @@ export async function fetchModels(
   const chatIds = catalog.agentModelSorts.flatMap((sort) =>
     sort.groups.flatMap((group) => group.modelIds),
   );
-  const variants = chatIds.map((id) => {
+  const variants = chatIds.flatMap((id) => {
+    const match = /^(.+)-(off|minimal|low|medium|high|xhigh|max)$/.exec(id);
+    if (!match) return [];
+
     const info = catalog.models[id]!;
-    const match = /^(.*)-(off|minimal|low|medium|high|xhigh|max)$/.exec(id);
-    const modelId = match?.[1] ?? id;
-    const level = match?.[2] as ModelThinkingLevel | undefined;
+    const modelId = match[1]!;
+    const level = match[2] as ModelThinkingLevel;
     const name = info.displayName || modelId;
-    return {
-      id,
-      modelId,
-      level,
-      name: level ? name.replace(new RegExp(`\\s*\\(${level}\\)\\s*$`, "i"), "") : name,
-      contextWindow: info.maxTokens,
-      maxOutputTokens: info.maxOutputTokens,
-    };
+    return [
+      {
+        id,
+        modelId,
+        level,
+        name: name.replace(new RegExp(`\\s*\\(${level}\\)\\s*$`, "i"), ""),
+        contextWindow: info.maxTokens,
+        maxOutputTokens: info.maxOutputTokens,
+      },
+    ];
   });
   const chatModels = [...Map.groupBy(variants, ({ modelId }) => modelId)].map(
     ([id, variants]): Model<"google-generative-ai"> => {
-      const levels = variants.flatMap(({ level, id }) => (level ? [[level, id]] : []));
+      const levels = variants.map(({ level, id }) => [level, id]);
       const thinkingLevelMap: ThinkingLevelMap = {
         off: null,
         minimal: null,
