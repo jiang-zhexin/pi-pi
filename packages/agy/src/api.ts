@@ -1,12 +1,7 @@
-import { randomBytes, timingSafeEqual } from "node:crypto";
-import { once } from "node:events";
-import { createServer, type IncomingMessage, type ServerResponse } from "node:http";
-import { createInterface } from "node:readline";
-import { Readable } from "node:stream";
-
 import {
   clampThinkingLevel,
   lazyStream,
+  type FetchFunction,
   type GoogleOptions,
   type Model,
   type ModelThinkingLevel,
@@ -18,149 +13,113 @@ import { googleGenerativeAIApi } from "@earendil-works/pi-ai/compat";
 
 import { endpointUrl, PROJECT_HEADER, USER_AGENT } from "./ccpa.ts";
 
-async function readBody(request: IncomingMessage): Promise<unknown> {
-  const chunks: Buffer[] = [];
-  let size = 0;
-  for await (const chunk of request) {
-    size += chunk.length;
-    if (size > 64 * 1024 * 1024) throw new Error("AGY request exceeds 64 MiB.");
-    chunks.push(chunk);
-  }
-  return JSON.parse(Buffer.concat(chunks).toString("utf8"));
-}
-
-async function unwrap(
-  upstream: Response,
-  response: ServerResponse,
-  signal: AbortSignal,
-): Promise<void> {
-  if (!upstream.body) throw new Error("AGY returned an empty response body.");
-  const input = Readable.fromWeb(upstream.body).setEncoding("utf8");
-  const lines = createInterface({ input, crlfDelay: Infinity });
+function createSseUnwrapTransform(): TransformStream<string, string> {
+  let lineBuffer = "";
   let data: string[] = [];
-  const flush = async () => {
+
+  const flushEvent = (controller: TransformStreamDefaultController<string>) => {
     if (!data.length) return;
     const text = data.join("\n");
     data = [];
     if (text === "[DONE]") return;
     const event = JSON.parse(text) as { response?: unknown };
-    if (!response.write(`data: ${JSON.stringify(event.response ?? event)}\n\n`)) {
-      await once(response, "drain", { signal });
-    }
+    controller.enqueue(`data: ${JSON.stringify(event.response ?? event)}\n\n`);
   };
-  try {
-    for await (const line of lines) {
-      signal.throwIfAborted();
-      if (!line) await flush();
-      else if (line.startsWith("data:")) data.push(line.slice(5).replace(/^ /, ""));
-    }
-    await flush();
-  } finally {
-    lines.close();
-    input.destroy();
-  }
+
+  const processLine = (line: string, controller: TransformStreamDefaultController<string>) => {
+    const normalized = line.endsWith("\r") ? line.slice(0, -1) : line;
+    if (!normalized) flushEvent(controller);
+    else if (normalized.startsWith("data:")) data.push(normalized.slice(5).replace(/^ /, ""));
+  };
+
+  return new TransformStream<string, string>({
+    transform(chunk, controller) {
+      lineBuffer += chunk;
+      const lines = lineBuffer.split("\n");
+      lineBuffer = lines.pop() ?? "";
+      for (const line of lines) processLine(line, controller);
+    },
+    flush(controller) {
+      if (lineBuffer) processLine(lineBuffer, controller);
+      flushEvent(controller);
+    },
+  });
 }
 
-async function bridge(
+async function parseRequestBody(
+  input: Parameters<FetchFunction>[0],
+  init?: RequestInit,
+): Promise<unknown> {
+  if (typeof init?.body === "string") return JSON.parse(init.body);
+  if (init?.body != null) return new Response(init.body).json();
+  if (input instanceof Request) return input.json();
+  throw new Error("AGY request is missing a JSON body.");
+}
+
+function createAgyFetch(
   model: Model<string>,
   backendId: string,
   access: string,
   project: string,
   endpoint: string,
   options: StreamOptions,
-) {
-  const key = randomBytes(32).toString("base64url");
-  const forward = async (request: IncomingMessage, response: ServerResponse) => {
-    const supplied = request.headers["x-goog-api-key"];
-    if (
-      typeof supplied !== "string" ||
-      Buffer.byteLength(supplied) !== Buffer.byteLength(key) ||
-      !timingSafeEqual(Buffer.from(supplied), Buffer.from(key)) ||
-      request.headers.origin
-    ) {
-      response.writeHead(401).end();
-      return;
+): FetchFunction {
+  const baseFetch = options.fetch ?? fetch;
+
+  return async (input, init) => {
+    const rawUrl =
+      typeof input === "string" ? input : input instanceof URL ? input.toString() : input.url;
+    const url = new URL(rawUrl);
+    const method = (
+      init?.method ?? (input instanceof Request ? input.method : "GET")
+    ).toUpperCase();
+    if (method !== "POST" || !/^\/models\/([^/]+):streamGenerateContent$/.test(url.pathname)) {
+      return new Response(null, { status: 404 });
     }
-    const url = new URL(request.url ?? "/", "http://127.0.0.1");
-    const match = /^\/models\/([^/]+):streamGenerateContent$/.exec(url.pathname);
-    if (request.method !== "POST" || !match?.[1]) {
-      response.writeHead(404).end();
-      return;
-    }
-    const disconnected = new AbortController();
-    response.on("close", () => disconnected.abort());
-    const signal = AbortSignal.any([
-      disconnected.signal,
-      AbortSignal.timeout(options.timeoutMs ?? 300_000),
-      ...(options.signal ? [options.signal] : []),
-    ]);
-    const body = await readBody(request);
-    const upstream = await (options.fetch ?? fetch)(
-      `${endpoint}/v1internal:streamGenerateContent?alt=sse`,
-      {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${access}`,
-          "Content-Type": "application/json",
-          "User-Agent": USER_AGENT,
-        },
-        body: JSON.stringify({ project, model: backendId, request: body }),
-        signal,
-        redirect: "error",
+
+    const signals: AbortSignal[] = [AbortSignal.timeout(options.timeoutMs ?? 300_000)];
+    if (init?.signal) signals.push(init.signal);
+    if (options.signal && options.signal !== init?.signal) signals.push(options.signal);
+    const signal = AbortSignal.any(signals);
+
+    const body = await parseRequestBody(input, init);
+    const upstream = await baseFetch(`${endpoint}/v1internal:streamGenerateContent?alt=sse`, {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${access}`,
+        "Content-Type": "application/json",
+        "User-Agent": USER_AGENT,
       },
-    );
-    try {
-      await options.onResponse?.(
+      body: JSON.stringify({ project, model: backendId, request: body }),
+      signal,
+      redirect: "error",
+    });
+
+    await options
+      .onResponse?.(
         { status: upstream.status, headers: Object.fromEntries(upstream.headers) },
         model,
-      );
-      response.writeHead(upstream.status, {
-        "Content-Type":
-          upstream.headers.get("content-type") ??
-          (upstream.ok ? "text/event-stream" : "application/json"),
-        ...(upstream.headers.has("retry-after")
-          ? { "Retry-After": upstream.headers.get("retry-after")! }
-          : {}),
+      )
+      ?.catch(async (error) => {
+        await upstream.body?.cancel().catch(() => {});
+        throw error;
       });
-      if (upstream.ok) await unwrap(upstream, response, signal);
-      else response.write(Buffer.from(await upstream.arrayBuffer()));
-      response.end();
-    } finally {
-      if (upstream.body && !upstream.body.locked) await upstream.body.cancel().catch(() => {});
-    }
-  };
-  const server = createServer((request, response) => {
-    void forward(request, response).catch((error: unknown) => {
-      if (response.destroyed) return;
-      if (response.headersSent) response.destroy(error instanceof Error ? error : undefined);
-      else
-        response.writeHead(502, { "Content-Type": "application/json" }).end(
-          JSON.stringify({
-            error: {
-              code: 502,
-              message: error instanceof Error ? error.message : "AGY forwarding failed",
-            },
-          }),
-        );
+
+    if (!upstream.ok) return upstream;
+    if (!upstream.body) throw new Error("AGY returned an empty response body.");
+
+    const unwrapped = upstream.body
+      .pipeThrough(new TextDecoderStream())
+      .pipeThrough(createSseUnwrapTransform())
+      .pipeThrough(new TextEncoderStream());
+
+    return new Response(unwrapped, {
+      status: upstream.status,
+      statusText: upstream.statusText,
+      headers: {
+        "Content-Type": upstream.headers.get("content-type") ?? "text/event-stream",
+      },
     });
-  });
-  await new Promise<void>((resolve, reject) => {
-    server.once("error", reject);
-    server.listen(0, "127.0.0.1", resolve);
-  });
-  server.unref();
-  const address = server.address();
-  if (!address || typeof address === "string") {
-    server.close();
-    throw new Error("Could not start the AGY request adapter.");
-  }
-  return {
-    key,
-    baseUrl: `http://127.0.0.1:${address.port}`,
-    close() {
-      server.close();
-      server.closeAllConnections();
-    },
   };
 }
 
@@ -184,44 +143,39 @@ function streamAgy(
       const headers = new Headers();
       for (const [name, value] of Object.entries({ ...model.headers, ...options.headers }))
         if (value !== null) headers.set(name, value);
+
       const project = headers.get(PROJECT_HEADER);
       if (!options.apiKey || !project) throw new Error("Run /login agy to authenticate.");
+
       const level = clampThinkingLevel(model, requestedLevel);
       const backendId = model.thinkingLevelMap?.[level];
       if (!backendId) {
         throw new Error(`AGY model "${model.id}" has no backend ID for thinking level "${level}".`);
       }
-      const adapter = await bridge(
-        model,
-        backendId,
-        options.apiKey,
-        project,
-        endpointUrl(model.baseUrl),
-        options,
-      );
+
+      const endpoint = endpointUrl(model.baseUrl);
+      const agyFetch = createAgyFetch(model, backendId, options.apiKey, project, endpoint, options);
       const { fetch: _fetch, onResponse: _onResponse, ...innerOptions } = options;
+
       headers.delete(PROJECT_HEADER);
       headers.delete("authorization");
       headers.delete("x-goog-api-key");
-      return (async function* () {
-        try {
-          const streamOptions: GoogleOptions = {
-            ...innerOptions,
-            maxTokens: innerOptions.maxTokens ?? model.maxTokens,
-            // AGY selects thinking effort through the backend ID, not Gemini's thinking config.
-            thinking: { enabled: true },
-            apiKey: adapter.key,
-            headers: Object.fromEntries(headers),
-          };
-          yield* google.stream(
-            { ...model, baseUrl: adapter.baseUrl, headers: Object.fromEntries(headers) },
-            context,
-            streamOptions,
-          );
-        } finally {
-          adapter.close();
-        }
-      })();
+      const cleanHeaders = Object.fromEntries(headers);
+
+      const streamOptions: GoogleOptions = {
+        ...innerOptions,
+        maxTokens: innerOptions.maxTokens ?? model.maxTokens,
+        // AGY selects thinking effort through the backend ID, not Gemini's thinking config.
+        thinking: { enabled: true },
+        apiKey: "agy",
+        headers: cleanHeaders,
+        fetch: agyFetch,
+      };
+      return google.stream(
+        { ...model, baseUrl: endpoint, headers: cleanHeaders },
+        context,
+        streamOptions,
+      );
     },
     undefined,
     options.signal,
