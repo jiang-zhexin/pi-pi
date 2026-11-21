@@ -20,13 +20,13 @@ type GeminiResponse = {
     finishReason: string;
     finishMessage: string;
   }[];
-  promptFeedback: { blockReason: string; blockReasonMessage: string };
+  promptFeedback?: { blockReason?: string; blockReasonMessage?: string };
   usageMetadata: {
-    promptTokenCount: number;
-    candidatesTokenCount: number;
-    cachedContentTokenCount: number;
-    thoughtsTokenCount: number;
-    totalTokenCount: number;
+    promptTokenCount?: number;
+    candidatesTokenCount?: number;
+    cachedContentTokenCount?: number;
+    thoughtsTokenCount?: number;
+    totalTokenCount?: number;
   };
 };
 
@@ -105,12 +105,12 @@ export const imagesApi: ProviderImages = {
       if (response.usageMetadata) {
         const raw = response.usageMetadata;
         const usage: Usage = {
-          input: raw.promptTokenCount - raw.cachedContentTokenCount,
-          output: raw.candidatesTokenCount + raw.thoughtsTokenCount,
-          cacheRead: raw.cachedContentTokenCount,
+          input: raw.promptTokenCount ?? 0,
+          output: raw.candidatesTokenCount ?? 0,
+          cacheRead: raw.cachedContentTokenCount ?? 0,
           cacheWrite: 0,
-          reasoning: raw.thoughtsTokenCount,
-          totalTokens: raw.totalTokenCount,
+          reasoning: raw.thoughtsTokenCount ?? 0,
+          totalTokens: raw.totalTokenCount ?? 0,
           cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0, total: 0 },
         };
         calculateCost(model, usage);
