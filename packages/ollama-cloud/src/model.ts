@@ -258,6 +258,21 @@ export const models: ProviderModelConfig[] = [
     },
   },
   {
+    id: "hy4",
+    name: "hy4",
+    reasoning: true,
+    compat: { ...ollamaCompat, supportsReasoningEffort: false },
+    input: ["text", "image"],
+    cost: {
+      cacheRead: 0.042,
+      cacheWrite: 0,
+      input: 0.834,
+      output: 2.501,
+    },
+    contextWindow: 1048576,
+    maxTokens: 32768,
+  },
+  {
     id: "inkling-2-small",
     name: "inkling-2-small",
     reasoning: true,
