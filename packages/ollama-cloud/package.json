@@ -1,33 +1,33 @@
 {
   "name": "@zhexin/pi-ollama-cloud",
-  "description": "Yet Another Ollama Cloud Provider Extension for the Pi agent.",
   "version": "1.0.0",
-  "type": "module",
-  "license": "MIT",
+  "description": "Yet Another Ollama Cloud Provider Extension for the Pi agent.",
   "keywords": [
-    "pi-package",
     "ollama-cloud",
+    "pi-package",
     "web-access"
   ],
+  "homepage": "https://github.com/jiang-zhexin/pi-pi/tree/HEAD/packages/ollama-cloud#readme",
+  "bugs": {
+    "url": "https://github.com/jiang-zhexin/pi-pi/issues"
+  },
+  "license": "MIT",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/jiang-zhexin/pi-pi.git",
     "directory": "packages/ollama-cloud"
   },
-  "homepage": "https://github.com/jiang-zhexin/pi-pi/tree/HEAD/packages/ollama-cloud#readme",
-  "bugs": {
-    "url": "https://github.com/jiang-zhexin/pi-pi/issues"
-  },
   "files": [
     "src/*",
     "index.ts"
   ],
+  "type": "module",
+  "exports": {
+    ".": "./index.ts"
+  },
   "publishConfig": {
     "access": "public",
     "registry": "https://registry.npmjs.org/"
-  },
-  "exports": {
-    ".": "./index.ts"
   },
   "peerDependencies": {
     "@earendil-works/pi-ai": "*",

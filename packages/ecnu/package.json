@@ -1,33 +1,33 @@
 {
   "name": "@zhexin/pi-ecnu",
-  "description": "ECNU Chat provider for the Pi agent.",
   "version": "0.0.3",
-  "type": "module",
-  "license": "MIT",
+  "description": "ECNU Chat provider for the Pi agent.",
   "keywords": [
-    "pi-package",
     "ecnu",
-    "image-generation"
+    "image-generation",
+    "pi-package"
   ],
+  "homepage": "https://github.com/jiang-zhexin/pi-pi/tree/HEAD/packages/ecnu#readme",
+  "bugs": {
+    "url": "https://github.com/jiang-zhexin/pi-pi/issues"
+  },
+  "license": "MIT",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/jiang-zhexin/pi-pi.git",
     "directory": "packages/ecnu"
   },
-  "homepage": "https://github.com/jiang-zhexin/pi-pi/tree/HEAD/packages/ecnu#readme",
-  "bugs": {
-    "url": "https://github.com/jiang-zhexin/pi-pi/issues"
-  },
   "files": [
     "src/*",
     "index.ts"
   ],
+  "type": "module",
+  "exports": {
+    ".": "./index.ts"
+  },
   "publishConfig": {
     "access": "public",
     "registry": "https://registry.npmjs.org/"
-  },
-  "exports": {
-    ".": "./index.ts"
   },
   "peerDependencies": {
     "@earendil-works/pi-ai": "*",
