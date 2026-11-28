@@ -176,12 +176,15 @@ export default function (pi: ExtensionAPI): void {
   pi.registerTool({
     name: "ocr",
     label: "DeepSeek OCR",
+    exposure: "codemode",
     namespace: deepseekNamespace,
     description:
-      "Recognize text in a PDF, Word (DOC, DOCX), PowerPoint (PPT, PPTX), or image (PNG, JPEG, WebP, GIF, BMP, TIFF) file page by page.",
-    promptSnippet: "Extract text from PDF, Word, PowerPoint, or image files via OCR",
+      "Extract text page by page from PDF, Word (DOC, DOCX), PowerPoint (PPT, PPTX), or images where only the text content matters.",
+    promptSnippet:
+      "Extract text from PDF, Word, PowerPoint, or images when only text content matters",
     promptGuidelines: [
-      "Use ocr instead of read for .pdf, .doc, .docx, .ppt, and .pptx files, or when extracting dense text from document images.",
+      "Use ocr to read .pdf, .doc, .docx, .ppt, and .pptx files.",
+      "For images, only use ocr when you only care about the text content.",
     ],
     parameters: schema.ocrInput,
     outputSchema: schema.ocrOutput,
