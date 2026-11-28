@@ -12,7 +12,7 @@ import type {
 const PROD = "https://cloudcode-pa.googleapis.com";
 const DAILY = "https://daily-cloudcode-pa.googleapis.com";
 export const PROJECT_HEADER = "x-agy-project";
-export const USER_AGENT = `antigravity/acp/1.5.0 (aidev_client; os_type=${platform() === "win32" ? "windows" : platform()}; arch=${arch() === "x64" ? "amd64" : arch()}; proxy_client=antigravity/sdk)`;
+export const USER_AGENT = `antigravity/acp/1.5.2 (aidev_client; os_type=${platform() === "win32" ? "windows" : platform()}; arch=${arch() === "x64" ? "amd64" : arch()}; proxy_client=antigravity/sdk)`;
 
 export type AgyCredential = OAuthCredential & { project: string; endpoint: string };
 
